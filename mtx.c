@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include "mtx_header.h"
 
-bool created_list;
+bool created_list = false;
 int nr_mlist = 0;
 int nr_plist = 0;
 pid_t wake_process;
@@ -27,6 +27,7 @@ struct mutex
 };
 struct process * plist;
 struct mutex * mlist;
+
 int mtxopen(pid_t pid)
 {
 	if (!created_list)
@@ -74,6 +75,7 @@ int mtxopen(pid_t pid)
 	}
 	return 0;
 }
+
 int mtxclose(int id)
 {
 	if (created_list)
@@ -92,12 +94,17 @@ int mtxclose(int id)
 	}
 	return -1;
 }
+
 int mtxlock(int id, pid_t pid)
 {
 	int mutex_found = -1;
 	int process_found = -1;
 	if(created_list)
 	{
+		printf("lock PID: %d\n", pid);
+		plist = realloc(plist, sizeof(struct process)*(++nr_plist));
+		plist[nr_plist-1].id = pid;
+		//plist[nr_mlist].
 		for(int i=0; i<nr_mlist; i++)
 		{
 			if(mlist[i].id == id && mlist[i].opened == true)
@@ -109,6 +116,7 @@ int mtxlock(int id, pid_t pid)
 		if(mutex_found == -1)
 			return -1;
 		// nr_plist = sizeof(&plist) / sizeof(struct process);
+		// printf("%d\n",mutex_found);
 		for(int i=0; i<nr_plist; i++)
 			if(plist[i].id == pid)
 			{
@@ -118,19 +126,30 @@ int mtxlock(int id, pid_t pid)
 		if(process_found == -1)
 			return -1;
 		plist[process_found].status = true;
+		printf("%d", mlist[mutex_found].nr_wlist);
 		if(mlist[mutex_found].locked == false)
 		{
+			printf("%d", mlist[mutex_found].nr_wlist);
+			mlist[mutex_found].wlist = realloc(mlist[mutex_found].wlist, sizeof(pid_t)*(mlist[mutex_found].nr_wlist++));
+			mlist[mutex_found].wlist[mlist[mutex_found].nr_wlist-1] = pid;
+			printf("%d", mlist[mutex_found].nr_wlist);
 			mlist[mutex_found].locked = true;
+			plist[process_found].status = false;
 			return 0;
 		}
 		mlist[mutex_found].wlist = realloc(mlist[mutex_found].wlist, sizeof(pid_t)*(mlist[mutex_found].nr_wlist++));
 		mlist[mutex_found].wlist[mlist[mutex_found].nr_wlist-1] = pid;
-		while(wake_process != pid);
+		while(wake_process != pid)
+		{
+			sleep(2);
+		}
 		plist[process_found].status = false;
+		mlist[mutex_found].locked = true;
 		return 0;
 	}
 	return -1;
 }
+
 int mtxunlock(int id)
 {
 	if(created_list)
@@ -140,6 +159,7 @@ int mtxunlock(int id)
 			if(mlist[i].id == id)
 			{
 				mlist[i].locked = false;
+				printf("unlock\n");
 				mtxgrant(id);
 				return 0;
 			}
@@ -147,3 +167,22 @@ int mtxunlock(int id)
 	}
 	return -1;
 }
+
+int mtxgrant(int id)
+{
+	printf("mtxgrant %d\n", created_list);
+	if(created_list)
+	{
+		pid_t tmp;
+		tmp = mlist[id].wlist[0];
+		printf("tmp:%d\n", tmp);
+		printf("Lungime %d\n", mlist[id].nr_wlist-1);
+		for(int i=0; i < mlist[id].nr_wlist - 1; i++)
+			mlist[id].wlist[i] = mlist[id].wlist[i+1];
+		mlist[id].wlist = realloc(mlist[id].wlist, sizeof(pid_t)*(--mlist[id].nr_wlist));
+		wake_process = tmp;
+		return 0;
+	}
+	return -1;
+}
+
