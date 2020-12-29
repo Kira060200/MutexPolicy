@@ -17,7 +17,7 @@ pthread_mutex_t mtx;
 pthread_t threads[5];
 int decrease_count(int count)
 {
-	printf("PID: %d\n",gettid());
+	//printf("PID: %d\n",gettid());
 	mtxlock(0, gettid());
 	if (available_resources < count)
 	{
@@ -33,7 +33,7 @@ int decrease_count(int count)
 }
 int increase_count(int count)
 {
-	printf("PID: %d\n",gettid());
+	//printf("PID: %d\n",gettid());
 	mtxlock(0, gettid());
 	available_resources += count;
 	printf("Released %d resources %d remaining\n", count, available_resources);
