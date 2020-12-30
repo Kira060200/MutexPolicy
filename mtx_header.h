@@ -2,7 +2,7 @@
 #define MTX_FUNCTIONS
 #include<pthread.h>
 
-int mtxopen(pid_t pid);
+int mtxopen(pid_t pid, int id);
 int mtxclose(int id);
 int mtxlock(int id, pid_t pid);
 int mtxunlock(int id);
