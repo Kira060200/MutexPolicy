@@ -15,9 +15,10 @@
 int available_resources = MAX_RESOURCES;
 pthread_mutex_t mtx; 
 pthread_t threads[5];
+struct mutex * m;
 int decrease_count(int count)
 {
-	printf("PID: %d\n",gettid());
+	//printf("PID: %d\n",gettid());
 	mtxlock(0, gettid());
 	if (available_resources < count)
 	{
@@ -33,7 +34,7 @@ int decrease_count(int count)
 }
 int increase_count(int count)
 {
-	printf("PID: %d\n",gettid());
+	//printf("PID: %d\n",gettid());
 	mtxlock(0, gettid());
 	available_resources += count;
 	printf("Released %d resources %d remaining\n", count, available_resources);
@@ -43,14 +44,16 @@ int increase_count(int count)
 void *calc(void *v)
 {
 	int count = (int)v;
-	decrease_count(count);
-	increase_count(count);
+	if(decrease_count(count)==0)
+	{
+		increase_count(count);
+	}
 	return 0;
 }
 int main()
 {
 	printf("MAX_RESOURCES=%d\n", MAX_RESOURCES);
-	if(mtxopen(getpid())) 
+	if(mtxopen(getpid(), 0)) 
 	{
 		perror(NULL);
 		return errno;
@@ -58,7 +61,7 @@ int main()
 	int i = 0;
 	for (i = 0; i < 5; i++)
 	{
-		int val = rand() % (MAX_RESOURCES + 1);
+		int val = rand() % (available_resources + 1);
 		if(pthread_create(&threads[i], NULL, calc, val))
 		{
 			perror(NULL);
@@ -73,6 +76,7 @@ int main()
 			return errno;
 		}
 	}
+	mtxclose(0);
 	//pthread_mutex_destroy(&mtx);
 	return 0;
 }

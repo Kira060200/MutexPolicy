@@ -7,8 +7,13 @@
 #include <syslog.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/mman.h>
 #include <sys/wait.h>
+#include "mtx_header.h"
+#include "mtx.c"
 
+struct mutex * mlist;
+char * name = "shm_daemon";
 void handle(int sign)
 {
 	if (sign == SIGTERM)
@@ -53,11 +58,18 @@ int main()
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
-    for (int i=1; i<5; i++)
-    //    while(1)
+    //for (int i=1; i<30; i++)
+    //int i=0;
+    while(1)
     {
-        syslog(LOG_NOTICE, "Daemon summoned.");
-        sleep(2);
+	int nr = mtxlist(mlist);
+	for (int i=0; i< nr; i++)
+	{
+		if(mlist[i].wlist>0)
+			mtxgrant(i);
+	}
+	syslog(LOG_NOTICE, "Daemon summoned.");
+	sleep(1);
     }
 
     syslog(LOG_NOTICE, "Daemon finished.");
